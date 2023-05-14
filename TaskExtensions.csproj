@@ -6,11 +6,11 @@
     <RootNamespace>CutilloRigby.Extensions.Task</RootNamespace>
     <PackageId>CutilloRigby.Extensions.Task</PackageId>
     <Authors>Martin Cutillo-Rigby</Authors>
-    <AssemblyVersion>1.0.2.0</AssemblyVersion>
-    <FileVersion>1.0.2.0</FileVersion>
+    <AssemblyVersion>1.0.3.0</AssemblyVersion>
+    <FileVersion>1.0.3.0</FileVersion>
     <Company>Martin Cutillo-Rigby</Company>
     <Product>CutilloRigby.Extensions.Task</Product>
-    <Version>1.0.2</Version>
+    <Version>1.0.3</Version>
     <Description>Task Extension Methods</Description>
     <Copyright>Martin Cutillo-Rigby 2023</Copyright>
     <IsPackable>true</IsPackable>
