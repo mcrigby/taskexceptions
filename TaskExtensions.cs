@@ -10,13 +10,15 @@ public static class TaskExtensions
             exception = task.Exception;
         if (task.IsCanceled && exception == null)
             exception = new OperationCanceledException();
-        if (task.IsCompletedSuccessfully)
+        if (task.IsCompleted)
             return;
         
         if (exception == null)
             exception = new Exception($"Unhandled Task State: {task.Status}");
 
-        if (exception != null)
+        if (exception is AggregateException aeg && aeg.InnerExceptions.Count == 1)
+            setException(aeg.InnerExceptions[0]);
+        else
             setException(exception);
     }
 
@@ -28,7 +30,7 @@ public static class TaskExtensions
             exception = task.Exception;
         if (task.IsCanceled && exception == null)
             exception = new OperationCanceledException();
-        if (task.IsCompletedSuccessfully)
+        if (task.IsCompleted)
             setResult(task.Result);
         
         if (exception == null)
