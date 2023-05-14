@@ -4,40 +4,59 @@ public static class TaskExtensions
 {
     public static void HandleTask(this Task task, Action<Exception> setException)
     {
-        Exception? exception = null;
-
         if (task.IsFaulted || task.IsCanceled)
+        {
+            Exception? exception = null;
             exception = task.Exception;
-        if (task.IsCanceled && exception == null)
-            exception = new OperationCanceledException();
+
+            if (exception == null && task.IsCanceled)
+                exception = new OperationCanceledException();
+            
+            if (exception != null)
+            {
+                if (exception is AggregateException aeg && aeg.InnerExceptions.Count == 1)
+                    setException(aeg.InnerExceptions[0]);
+                else
+                    setException(exception);
+            }
+
+            return;
+        }
+
         if (task.IsCompleted)
             return;
         
-        if (exception == null)
-            exception = new Exception($"Unhandled Task State: {task.Status}");
-
-        if (exception is AggregateException aeg && aeg.InnerExceptions.Count == 1)
-            setException(aeg.InnerExceptions[0]);
-        else
-            setException(exception);
+        setException(new Exception($"Unhandled Task State: {task.Status}"));
     }
 
     public static void HandleTask<T>(this Task<T> task, Action<T> setResult, Action<Exception> setException)
     {
-        Exception? exception = null;
-        
         if (task.IsFaulted || task.IsCanceled)
+        {
+            Exception? exception = null;
             exception = task.Exception;
-        if (task.IsCanceled && exception == null)
-            exception = new OperationCanceledException();
-        if (task.IsCompleted)
-            setResult(task.Result);
-        
-        if (exception == null)
-            exception = new Exception($"Unhandled Task State: {task.Status}");
 
-        if (exception != null)
-            setException(exception);
+            if (exception == null && task.IsCanceled)
+                exception = new OperationCanceledException();
+            
+            if (exception != null)
+            {
+                if (exception is AggregateException aeg && aeg.InnerExceptions.Count == 1)
+                    setException(aeg.InnerExceptions[0]);
+                else
+                    setException(exception);
+            }
+
+            return;
+        }
+        
+        if (task.IsCompleted)
+        {
+            setResult(task.Result);
+            return;
+        }
+
+        setException(new Exception($"Unhandled Task State: {task.Status}"));
     }
 
     public static void WaitForResult(this Task task, CancellationToken cancellationToken)
