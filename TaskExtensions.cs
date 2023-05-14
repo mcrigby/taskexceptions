@@ -2,6 +2,102 @@
 
 public static class TaskExtensions
 {
+    public static void HandleTask(this Task task, Action<Exception> setException)
+    {
+        Exception? exception = null;
+
+        if (task.IsFaulted || task.IsCanceled)
+            exception = task.Exception;
+        if (task.IsCanceled && exception == null)
+            exception = new OperationCanceledException();
+        if (task.IsCompletedSuccessfully)
+            return;
+        
+        if (exception == null)
+            exception = new Exception($"Unhandled Task State: {task.Status}");
+
+        if (exception != null)
+            setException(exception);
+    }
+
+    public static void HandleTask<T>(this Task<T> task, Action<T> setResult, Action<Exception> setException)
+    {
+        Exception? exception = null;
+        
+        if (task.IsFaulted || task.IsCanceled)
+            exception = task.Exception;
+        if (task.IsCanceled && exception == null)
+            exception = new OperationCanceledException();
+        if (task.IsCompletedSuccessfully)
+            setResult(task.Result);
+        
+        if (exception == null)
+            exception = new Exception($"Unhandled Task State: {task.Status}");
+
+        if (exception != null)
+            setException(exception);
+    }
+
+    public static void WaitForResult(this Task task, CancellationToken cancellationToken)
+    {
+        WaitForResult(task, cancellationToken, (ex, msg) => { });
+    }
+
+    public static void WaitForResult(this Task task, CancellationToken cancellationToken, 
+        Action<Exception, string> handleException)
+    {
+        try
+        {
+            Exception? exception = default;
+            Task waitingTask = task.ContinueWith(x =>
+                x.HandleTask(ex => exception = ex)
+            , TaskContinuationOptions.ExecuteSynchronously);
+            waitingTask.Wait(cancellationToken);
+
+            if (exception != null)
+                handleException(exception, "An Error occurred in Task.");
+
+            if (waitingTask.IsFaulted)
+                handleException(waitingTask.Exception, "An Error occurred while waiting for Task to complete.");
+
+            return;
+        }
+        catch (Exception ex)
+        {
+            handleException(ex, "An Error occurred in WaitForResult().");
+        }
+    }
+
+    public static T? WaitForResult<T>(this Task<T> task, CancellationToken cancellationToken)
+    {
+        return WaitForResult(task, cancellationToken, (ex, msg) => default(T));
+    }
+
+    public static T? WaitForResult<T>(this Task<T> task, CancellationToken cancellationToken, Func<Exception, string, T?> handleException)
+    {
+        try
+        {
+            T? result = default;
+            Exception? exception = null;
+            Task waitingTask = task.ContinueWith(x =>
+                x.HandleTask(re => result = re, ex => exception = ex)
+            , TaskContinuationOptions.ExecuteSynchronously);
+            waitingTask.Wait(cancellationToken);
+
+            if (exception != null)
+                return handleException(exception, "An Error occurred in Task.");
+
+            if (waitingTask.IsFaulted)
+                return handleException(waitingTask.Exception, "An Error occurred while waiting for Task to complete.");
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return handleException(ex, "An Error occurred in WaitForResult().");
+        }
+    }
+
     /// <summary>
     /// Observes the task to avoid the UnobservedTaskException event to be raised.
     /// </summary>
